@@ -18,6 +18,8 @@ if 'masraf_verileri' not in st.session_state: st.session_state.masraf_verileri =
 if 'odeme_planlari' not in st.session_state: st.session_state.odeme_planlari = pd.DataFrame(columns=["Müşteri", "Toplam Tutar", "Taksit Sayısı", "Ödenen", "Kalan"])
 if 'gunluk_defter' not in st.session_state: st.session_state.gunluk_defter = pd.DataFrame(columns=["Tarih", "Hava Durumu", "Yapılan İşler", "Notlar"])
 if 'teklif_listesi' not in st.session_state: st.session_state.teklif_listesi = pd.DataFrame(columns=["Tarih", "Proje Adı", "Müşteri", "Teklif Tutarı", "Durum"])
+if 'taseron_odemeleri' not in st.session_state: 
+    st.session_state.taseron_odemeleri = pd.DataFrame(columns=["Tarih", "Firma", "Tutar", "Durum", "Vade Tarihi"])
 if 'kurumsal_bilgiler' not in st.session_state:
     st.session_state.kurumsal_bilgiler = {"sirket_adi": "KOMUTANIM İNŞAAT", "adres": "Türkiye", "tel": "+90", "v_no": "12345"}
 
@@ -76,17 +78,52 @@ if menu == "📄 Teklif & PDF":
 
 # --- 2. TAŞERON & HAKEDİŞ ---
 elif menu == "🏗️ Taşeron & Hakediş":
-    st.header("🏗️ Taşeron ve Sözleşme Takibi")
-    tas1, tas2 = st.tabs(["Taşeron Ekle", "Hakediş Ödemesi"])
+    st.header("🏗️ Taşeron Operasyonları ve Ödeme Takvimi")
+    
+    tas1, tas2, tas3 = st.tabs(["Taşeron Kayıt/Sil", "Hakediş Planla", "📅 Ödeme Takvimi"])
+    
     with tas1:
-        with st.form("tas_ek"):
-            f_ad = st.text_input("Firma/Usta")
-            f_is = st.text_input("İş Kolu")
-            f_tut = st.number_input("Sözleşme Tutarı", min_value=0.0)
-            if st.form_submit_button("Kaydet"):
-                yeni = pd.DataFrame([[f_ad, f_is, f_tut, f_tut]], columns=st.session_state.taseron_listesi.columns)
-                st.session_state.taseron_listesi = pd.concat([st.session_state.taseron_listesi, yeni], ignore_index=True)
-    st.table(st.session_state.taseron_listesi)
+        col_sol, col_sag = st.columns([1, 2])
+        with col_sol:
+            st.subheader("Yeni Taşeron")
+            with st.form("tas_ek"):
+                f_ad = st.text_input("Firma/Usta Adı")
+                f_is = st.text_input("İş Kolu")
+                f_tut = st.number_input("Sözleşme Toplamı (TL)", min_value=0.0)
+                if st.form_submit_button("Sisteme Ekle"):
+                    yeni = pd.DataFrame([[f_ad, f_is, f_tut, f_tut]], columns=st.session_state.taseron_listesi.columns)
+                    st.session_state.taseron_listesi = pd.concat([st.session_state.taseron_listesi, yeni], ignore_index=True)
+                    st.success(f"{f_ad} eklendi.")
+        with col_sag:
+            st.subheader("Mevcut Taşeronlar")
+            if not st.session_state.taseron_listesi.empty:
+                silinecek = st.selectbox("Silmek İstediğiniz Taşeron", st.session_state.taseron_listesi["Firma Adı"])
+                if st.button("🚨 Seçili Taşeronu Sil"):
+                    st.session_state.taseron_listesi = st.session_state.taseron_listesi[st.session_state.taseron_listesi["Firma Adı"] != silinecek]
+                    st.rerun()
+                st.table(st.session_state.taseron_listesi)
+
+    with tas2:
+        st.subheader("Taksitli Hakediş Girişi")
+        if not st.session_state.taseron_listesi.empty:
+            with st.form("hakedis_plan"):
+                f_sec = st.selectbox("Firma Seç", st.session_state.taseron_listesi["Firma Adı"])
+                h_tut = st.number_input("Hakediş Tutarı", min_value=0.0)
+                taksit_sayisi = st.slider("Taksit Sayısı", 1, 12, 1)
+                ilk_vade = st.date_input("İlk Ödeme Tarihi", datetime.now())
+                if st.form_submit_button("Planı Onayla"):
+                    t_tut = h_tut / taksit_sayisi
+                    for i in range(taksit_sayisi):
+                        vade = ilk_vade.replace(month=(ilk_vade.month + i - 1) % 12 + 1)
+                        yeni_h = pd.DataFrame([[datetime.now().date(), f_sec, t_tut, "Beklemede", vade]], columns=st.session_state.taseron_odemeleri.columns)
+                        st.session_state.taseron_odemeleri = pd.concat([st.session_state.taseron_odemeleri, yeni_h], ignore_index=True)
+                    idx = st.session_state.taseron_listesi[st.session_state.taseron_listesi["Firma Adı"] == f_sec].index
+                    st.session_state.taseron_listesi.at[idx[0], "Kalan"] -= h_tut
+                    st.success("Taksitler oluşturuldu.")
+
+    with tas3:
+        st.subheader("📅 Ödeme Takvimi")
+        st.dataframe(st.session_state.taseron_odemeleri.sort_values("Vade Tarihi"), use_container_width=True)
 
 # --- 3. MÜŞTERİ & ÖDEME PLANI ---
 elif menu == "🤝 Müşteri & Ödeme Planı":
