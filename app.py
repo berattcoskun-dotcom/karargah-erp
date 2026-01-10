@@ -158,3 +158,52 @@ elif menu == "📐 Metraj Hesabı":
     m_alan = st.number_input("Alan (m2)", value=1000)
     st.write(f"Tahmini Demir: {m_alan * 0.038:.2f} Ton")
     st.write(f"Tahmini Beton: {m_alan * 0.42:.2f} m3")
+
+# --- LÜKS TASARIM CSS KODU (Bunu kodun en başına, title'dan hemen sonra ekleyin) ---
+st.markdown("""
+    <style>
+    /* Ana Arka Plan */
+    .stApp {
+        background-color: #f4f7f6;
+    }
+    /* Sidebar (Yan Menü) Tasarımı */
+    [data-testid="stSidebar"] {
+        background-color: #1e2d3b;
+        color: white;
+    }
+    /* Butonları Güzelleştirme */
+    .stButton>button {
+        width: 100%;
+        border-radius: 10px;
+        height: 3em;
+        background-color: #007bff;
+        color: white;
+        border: none;
+    }
+    .stButton>button:hover {
+        background-color: #0056b3;
+        border: 2px solid white;
+    }
+    /* Kart Yapısı (Metrics) */
+    div[data-testid="metric-container"] {
+        background-color: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border: 1px solid #e1e4e8;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- GÜZELLEŞTİRİLMİŞ DASHBOARD ÖRNEĞİ ---
+st.header("🏢 Şantiye Komuta Merkezi")
+c1, c2, c3, c4 = st.columns(4)
+
+with c1:
+    st.metric(label="📊 Aktif Teklifler", value="12 Adet", delta="3 Yeni")
+with c2:
+    st.metric(label="💰 Toplam Ciro", value="1.2M TL", delta="15%")
+with c3:
+    st.metric(label="👷 Sahadaki Ekip", value="24 Kişi")
+with c4:
+    st.metric(label="📉 Geciken İşler", value="2", delta="-1", delta_color="inverse")
