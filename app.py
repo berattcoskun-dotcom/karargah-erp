@@ -111,3 +111,50 @@ if menu == "PROJE_YONETIM":
 elif menu == "💸 Finans & Giderler":
     st.header("💸 Finans Yönetimi")
     st.write("Proje bazlı gider kalemleri bir sonraki aşamada buraya eklenecektir.")
+
+# --- ANA HAFIZA GÜNCELLEME (Session State kısmına ekleyin) ---
+if 'gider_kategorileri' not in st.session_state:
+    st.session_state.gider_kategorileri = ["Beton", "Demir", "İşçilik", "Akaryakıt", "Yemek", "Nalbur", "Diğer"]
+
+if 'birimler' not in st.session_state:
+    st.session_state.birimler = ["m2", "m3", "Ton", "Adet", "Sefer", "Gün", "Ay"]
+
+if 'kasa_banka' not in st.session_state:
+    st.session_state.kasa_banka = ["Merkez Kasa", "Banka Hesabı", "Şantiye Kasası"]
+
+# --- YAN PANELDEKİ İŞLEM SEÇİN KISMINA EKLEME ---
+# menu = st.sidebar.selectbox("İŞLEM SEÇİN", [..., "⚙️ Temel Ayarlar"])
+
+# --- MODÜL: TEMEL AYARLAR (YENİ) ---
+if menu == "⚙️ Temel Ayarlar":
+    st.header("⚙️ Sistem Temel Ayarları")
+    st.info("Bu bölümdeki tanımlamalar, finans ve puantaj modüllerinde seçenek olarak karşınıza çıkacaktır.")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.subheader("📁 Gider Kategorileri")
+        yeni_kat = st.text_input("Yeni Kategori Ekle")
+        if st.button("Kategoriyi Kaydet"):
+            if yeni_kat and yeni_kat not in st.session_state.gider_kategorileri:
+                st.session_state.gider_kategorileri.append(yeni_kat)
+                st.success("Kategori Eklendi!")
+        st.write(st.session_state.gider_kategorileri)
+
+    with col2:
+        st.subheader("📏 Birim Tanımları")
+        yeni_birim = st.text_input("Yeni Birim Ekle")
+        if st.button("Birimi Kaydet"):
+            if yeni_birim and yeni_birim not in st.session_state.birimler:
+                st.session_state.birimler.append(yeni_birim)
+                st.success("Birim Eklendi!")
+        st.write(st.session_state.birimler)
+
+    with col3:
+        st.subheader("🏦 Kasa / Banka")
+        yeni_kasa = st.text_input("Yeni Kasa/Banka Ekle")
+        if st.button("Kasayı Kaydet"):
+            if yeni_kasa and yeni_kasa not in st.session_state.kasa_banka:
+                st.session_state.kasa_banka.append(yeni_kasa)
+                st.success("Kasa Eklendi!")
+        st.write(st.session_state.kasa_banka)
