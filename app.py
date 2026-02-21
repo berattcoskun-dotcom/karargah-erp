@@ -1,9 +1,11 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+from PIL import Image
+import io
 
 # --- SAYFA AYARLARI ---
-st.set_page_config(page_title="Karargah ERP v11", layout="wide")
+st.set_page_config(page_title="Karargah ERP v11.2", layout="wide")
 
 # --- AÇIK TEMA TASARIMI ---
 st.markdown("""
@@ -11,63 +13,101 @@ st.markdown("""
     .stApp { background-color: #FFFFFF; }
     [data-testid="stSidebar"] { background-color: #F8F9FA; border-right: 1px solid #E9ECEF; }
     .stButton>button { background-color: #007BFF; color: white; border-radius: 8px; font-weight: bold; }
+    .project-card { padding: 15px; border: 1px solid #E9ECEF; border-radius: 10px; margin-bottom: 10px; background-color: #FBFBFB; }
     </style>
     """, unsafe_allow_html=True)
 
 # --- ANA HAFIZA (SESSION STATE) ---
-# Sütun sayısını güncelledik (7 Sütun)
 if 'projeler' not in st.session_state:
     st.session_state.projeler = pd.DataFrame(columns=[
-        "Proje Adı", "Konum", "İnşaat m2", "Daire Sayısı", "Başlangıç", "Durum", "Fotoğraf"
+        "Proje Adı", "Konum", "İnşaat m2", "Daire Sayısı", "Başlangıç", "Durum", "FotoData"
     ])
 
-# --- YAN PANEL (SIDEBAR) HİYERARŞİSİ ---
-st.sidebar.title("🛡️ KARARGAH v11")
-ana_secim = st.sidebar.radio("ANA MENÜ", ["🏠 Proje Kayıt Merkezi", "🛠️ Proje Operasyonları"])
+# --- YAN PANEL HİYERARŞİSİ ---
+st.sidebar.title("🛡️ KARARGAH v11.2")
+ana_secim = st.sidebar.radio("ANA MENÜ", ["🏠 Proje Kayıt & Düzenle", "🛠️ Proje Operasyonları"])
 
-if ana_secim == "🏠 Proje Kayıt Merkezi":
-    menu = "PROJE_KAYIT"
+if ana_secim == "🏠 Proje Kayıt & Düzenle":
+    menu = "PROJE_YONETIM"
 else:
     st.sidebar.markdown("---")
-    menu = st.sidebar.selectbox("İŞLEM SEÇİN", 
-        ["💸 Finans & Giderler", "🏗️ Taşeron & Hakediş", "👷 Personel & Puantaj", "🚚 Malzeme Transferi", "🏠 Müşteri Paneli"])
+    menu = st.sidebar.selectbox("İŞLEM SEÇİN", ["💸 Finans & Giderler", "🏗️ Taşeron & Hakediş", "👷 Personel & Puantaj"])
 
-# --- MODÜL 1: PROJE KAYIT (GÜNCELLENMİŞ) ---
-if menu == "PROJE_KAYIT":
-    st.header("🏗️ Proje Kayıt ve Teknik Künye")
+# --- MODÜL: PROJE YÖNETİMİ ---
+if menu == "PROJE_YONETIM":
+    st.header("🏗️ Proje Yönetim Merkezi")
     
-    col1, col2 = st.columns([1, 2])
+    tab_ekle, tab_duzenle = st.tabs(["➕ Yeni Proje Ekle", "✏️ Kayıtlı Projeyi Düzenle"])
     
-    with col1:
-        st.subheader("Yeni Proje Girişi")
-        with st.form("proje_form", clear_on_submit=True):
-            p_ad = st.text_input("Proje Adı")
-            p_kon = st.text_input("Konum")
-            c_m2, c_dr = st.columns(2)
-            p_m2 = c_m2.number_input("İnşaat m2", min_value=0)
-            p_dr = c_dr.number_input("Daire Sayısı", min_value=0)
-            p_dur = st.selectbox("Durum", ["Planlama", "Temel", "Kaba İnşaat", "İnce İşler", "Tamamlandı"])
-            p_foto = st.file_uploader("Proje Fotoğrafı", type=['jpg','png'])
+    # --- YENİ KAYIT ---
+    with tab_ekle:
+        col1, col2 = st.columns([1, 1.5])
+        with col1:
+            with st.form("yeni_proje_form", clear_on_submit=True):
+                p_ad = st.text_input("Proje Adı")
+                p_kon = st.text_input("Konum")
+                # Küsüratlı rakam için step ve format ayarlandı
+                p_m2 = st.number_input("İnşaat m2", min_value=0.0, step=0.01, format="%.2f")
+                p_dr = st.number_input("Daire Sayısı", min_value=0)
+                p_dur = st.selectbox("Durum", ["Planlama", "Temel", "Kaba İnşaat", "İnce İşler", "Tamamlandı"])
+                p_foto = st.file_uploader("Proje Fotoğrafı", type=['jpg','png','jpeg'])
+                
+                if st.form_submit_button("Projeyi Veritabanına Ekle"):
+                    if p_ad:
+                        img_byte = None
+                        if p_foto:
+                            img_byte = p_foto.getvalue()
+                        
+                        yeni_satir = pd.DataFrame([[
+                            p_ad, p_kon, p_m2, p_dr, datetime.now().date(), p_dur, img_byte
+                        ]], columns=st.session_state.projeler.columns)
+                        st.session_state.projeler = pd.concat([st.session_state.projeler, yeni_satir], ignore_index=True)
+                        st.success("Yeni Proje Kaydedildi!")
+                        st.rerun()
+        
+        with col2:
+            st.subheader("📋 Mevcut Projeler Özet")
+            if not st.session_state.projeler.empty:
+                for idx, row in st.session_state.projeler.iterrows():
+                    with st.container():
+                        c_img, c_txt = st.columns([1, 2])
+                        if row['FotoData']:
+                            c_img.image(row['FotoData'], width=150)
+                        else:
+                            c_img.write("🖼️ Fotoğraf Yok")
+                        c_txt.markdown(f"**{row['Proje Adı']}**")
+                        c_txt.write(f"📍 {row['Konum']} | 📏 {row['İnşaat m2']} m2")
+                        st.divider()
+
+    # --- DÜZENLEME MODÜLÜ ---
+    with tab_duzenle:
+        if st.session_state.projeler.empty:
+            st.info("Düzenlenecek proje bulunmuyor.")
+        else:
+            secilen_p_adi = st.selectbox("Düzenlemek istediğiniz projeyi seçin", st.session_state.projeler["Proje Adı"])
+            idx = st.session_state.projeler[st.session_state.projeler["Proje Adı"] == secilen_p_adi].index[0]
+            p_data = st.session_state.projeler.iloc[idx]
             
-            if st.form_submit_button("Projeyi Veritabanına Ekle"):
-                if p_ad:
-                    yeni_satir = pd.DataFrame([[
-                        p_ad, p_kon, p_m2, p_dr, datetime.now().date(), p_dur, (p_foto.name if p_foto else "Yok")
-                    ]], columns=st.session_state.projeler.columns)
-                    st.session_state.projeler = pd.concat([st.session_state.projeler, yeni_satir], ignore_index=True)
-                    st.success("Kayıt Başarılı!")
+            with st.form("duzenle_form"):
+                d_ad = st.text_input("Proje Adı", value=p_data["Proje Adı"])
+                d_kon = st.text_input("Konum", value=p_data["Konum"])
+                d_m2 = st.number_input("İnşaat m2", value=float(p_data["İnşaat m2"]), step=0.01, format="%.2f")
+                d_dr = st.number_input("Daire Sayısı", value=int(p_data["Daire Sayısı"]))
+                d_dur = st.selectbox("Durum", ["Planlama", "Temel", "Kaba İnşaat", "İnce İşler", "Tamamlandı"], 
+                                     index=["Planlama", "Temel", "Kaba İnşaat", "İnce İşler", "Tamamlandı"].index(p_data["Durum"]))
+                
+                st.write("Not: Fotoğrafı değiştirmek için Yeni Ekle sekmesini kullanın veya mevcut kalsın.")
+                
+                if st.form_submit_button("Değişiklikleri Kaydet"):
+                    st.session_state.projeler.at[idx, "Proje Adı"] = d_ad
+                    st.session_state.projeler.at[idx, "Konum"] = d_kon
+                    st.session_state.projeler.at[idx, "İnşaat m2"] = d_m2
+                    st.session_state.projeler.at[idx, "Daire Sayısı"] = d_dr
+                    st.session_state.projeler.at[idx, "Durum"] = d_dur
+                    st.success("Proje Bilgileri Güncellendi!")
                     st.rerun()
-                else:
-                    st.error("Lütfen Proje Adı girin!")
 
-    with col2:
-        st.subheader("📋 Kayıtlı Projeler")
-        st.dataframe(st.session_state.projeler, use_container_width=True)
-
-# --- MODÜL 2: FİNANS (HAZIRLIK) ---
+# --- DİĞER MODÜLLER (HAZIRLIK) ---
 elif menu == "💸 Finans & Giderler":
     st.header("💸 Finans Yönetimi")
-    if st.session_state.projeler.empty:
-        st.warning("Önce 'Proje Kayıt Merkezi'nden bir proje oluşturmalısınız!")
-    else:
-        st.success("Finans modülü aktif edilmeye hazır. Komutanım, harcama kalemlerini kodlayalım mı?")
+    st.write("Proje bazlı gider kalemleri bir sonraki aşamada buraya eklenecektir.")
