@@ -24,7 +24,7 @@ st.markdown("""
 
 # --- HAFIZA SİSTEMİ (SESSION STATE) ---
 state_keys = {
-    'projeler': pd.DataFrame(columns=["Proje Adı", "Konum", "Başlangıç", "Durum"]),
+    'projeler': pd.DataFrame(columns=["Proje Adı", "Konum","İnşaat m2" , "Daire Sayısı" , "Başlangıç", "Durum", "Fotograf"]),
     'personel_listesi': pd.DataFrame(columns=["Ad Soyad", "Görevi", "Bağlı Proje"]),
     'puantaj_verileri': pd.DataFrame(columns=["Tarih", "Personel", "Yevmiye", "Proje"]),
     'taseron_listesi': pd.DataFrame(columns=["Firma Adı", "İş Kolu", "Sözleşme Tutarı", "Kalan", "Bağlı Proje"]),
@@ -61,25 +61,55 @@ menu = st.sidebar.selectbox("KOMUTA MERKEZİ",
      "👷 Personel & Puantaj", "💸 Finans & Giderler", "🚚 Malzeme Transferi", "🏠 Müşteri Paneli"])
 
 # --- 1. PROJE YÖNETİMİ ---
-if menu == "🏗️ Proje Yönetimi":
-    st.header("🏗️ Proje Kayıt ve Yönetimi")
-    t1, t2 = st.tabs(["Yeni Proje Aç", "Projeleri Düzenle"])
-    with t1:
-        with st.form("p_ekle"):
+if menu == "🏠 Proje Kayıt ve Genel Durum":
+    st.header("🏗️ Proje Kayıt ve Teknik Detaylar")
+    
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
+        st.subheader("Yeni Proje Künyesi")
+        with st.form("proje_form", clear_on_submit=True):
             p_ad = st.text_input("Proje Adı")
             p_kon = st.text_input("Konum")
-            p_dur = st.selectbox("Durum", ["Devam Ediyor", "Planlama", "Tamamlandı"])
+            
+            # Teknik Detaylar
+            c_m2, c_daire = st.columns(2)
+            p_m2 = c_m2.number_input("İnşaat Alanı (m2)", min_value=0)
+            p_daire = c_daire.number_input("Daire Sayısı", min_value=0)
+            
+            p_dur = st.selectbox("Durum", ["Planlama", "Temel", "Kaba İnşaat", "İnce İşler", "Tamamlandı"])
+            
+            # Fotoğraf Yükleme
+            p_foto = st.file_uploader("Proje Görseli Yükle", type=['jpg', 'png', 'jpeg'])
+            
             if st.form_submit_button("Projeyi Kaydet"):
-                yeni = pd.DataFrame([[p_ad, p_kon, datetime.now().date(), p_dur]], columns=st.session_state.projeler.columns)
-                st.session_state.projeler = pd.concat([st.session_state.projeler, yeni], ignore_index=True)
-                st.success("Proje eklendi.")
-    with t2:
-        st.dataframe(st.session_state.projeler, use_container_width=True)
+                if p_ad:
+                    # Fotoğrafı işleme (Basit simülasyon)
+                    foto_bilgi = p_foto.name if p_foto else "Görsel Yok"
+                    
+                    yeni_veri = pd.DataFrame([[
+                        p_ad, p_kon, p_m2, p_daire, datetime.now().date(), p_dur, foto_bilgi
+                    ]], columns=st.session_state.projeler.columns)
+                    
+                    st.session_state.projeler = pd.concat([st.session_state.projeler, yeni_veri], ignore_index=True)
+                    st.success(f"{p_ad} Projesi Teknik Detaylarıyla Kaydedildi!")
+                else:
+                    st.error("Proje adı girmek zorunludur!")
+
+    with col2:
+        st.subheader("📋 Proje Envanteri")
         if not st.session_state.projeler.empty:
-            sil_p = st.selectbox("Silinecek Proje", st.session_state.projeler["Proje Adı"])
-            if st.button("🚨 Projeyi Sil"):
-                st.session_state.projeler = st.session_state.projeler[st.session_state.projeler["Proje Adı"] != sil_p]
-                st.rerun()
+            # Daha şık bir görünüm için dataframe'i özelleştirelim
+            st.dataframe(st.session_state.projeler, use_container_width=True)
+            
+            # Özet Kartlar
+            secilen_p = st.selectbox("Detaylı Görünüm İçin Proje Seç", st.session_state.projeler["Proje Adı"])
+            p_detay = st.session_state.projeler[st.session_state.projeler["Proje Adı"] == secilen_p].iloc[0]
+            
+            # Küçük Bilgi Kartı
+            st.info(f"📍 **{secilen_p}** | 📏 {p_detay['İnşaat m2']} m2 | 🏢 {p_detay['Daire Sayısı']} Daire")
+        else:
+            st.write("Henüz kayıtlı proje bulunmuyor.")
 
 # --- 2. DASHBOARD ---
 elif menu == "📊 Proje Dashboard":
