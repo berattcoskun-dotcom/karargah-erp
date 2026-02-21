@@ -5,7 +5,7 @@ from fpdf import FPDF
 import io
 
 # --- SAYFA AYARLARI ---
-st.set_page_config(page_title="Karargah ERP v10.0", layout="wide")
+st.set_page_config(page_title="Karargah ERP v11.0", layout="wide")
 
 # --- PROFESYONEL AÇIK TEMA TASARIMI (CSS) ---
 st.markdown("""
