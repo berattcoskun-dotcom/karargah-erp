@@ -195,3 +195,39 @@ elif menu == "🏠 Müşteri Paneli":
         for i, r in st.session_state.proje_asama.iterrows():
             st.write(f"**{r['Proje Adı']}**")
             st.progress(r['İlerleme %'] / 100)
+
+# Menü seçeneklerine "Personel Takibi"ni eklemeyi unutmayın: 
+# menu = st.sidebar.selectbox("İşlem Seçiniz", ["Stok Durumu", "Malzeme Girişi", "Masraf Kaydı", "Personel Takibi"])
+
+if menu == "Personel Takibi":
+    st.header("👷 Personel Puantaj ve Ödeme Takibi")
+    
+    tab1, tab2 = st.tabs(["Puantaj Girişi", "Ödeme/Avans Kaydı"])
+    
+    with tab1:
+        with st.form("puantaj_form"):
+            p_tarih = st.date_input("Çalışma Tarihi", datetime.now())
+            p_ad = st.text_input("Personel Adı Soyadı")
+            p_yevmiye = st.number_input("Günlük Yevmiye (TL)", min_value=0)
+            p_mesai = st.number_input("Ek Mesai (Saat)", min_value=0)
+            
+            if st.form_submit_button("Puantajı Kaydet"):
+                df = verileri_yukle("personel_puantaj.csv")
+                yeni_p = pd.DataFrame([[p_tarih, p_ad, p_yevmiye, p_mesai]], columns=["Tarih", "Ad Soyad", "Yevmiye", "Mesai"])
+                df = pd.concat([df, yeni_p], ignore_index=True)
+                df.to_csv("personel_puantaj.csv", index=False)
+                st.success(f"{p_ad} için puantaj işlendi.")
+
+    with tab2:
+        with st.form("odeme_form"):
+            o_tarih = st.date_input("Ödeme Tarihi", datetime.now())
+            o_ad = st.text_input("Ödeme Yapılan Personel")
+            o_tutar = st.number_input("Ödenen Tutar (TL)", min_value=0)
+            o_tip = st.selectbox("İşlem Tipi", ["Maaş", "Avans", "Elden Ödeme"])
+            
+            if st.form_submit_button("Ödemeyi Kaydet"):
+                df = verileri_yukle("personel_odemeler.csv")
+                yeni_o = pd.DataFrame([[o_tarih, o_ad, o_tutar, o_tip]], columns=["Tarih", "Ad Soyad", "Tutar", "Tip"])
+                df = pd.concat([df, yeni_o], ignore_index=True)
+                df.to_csv("personel_odemeler.csv", index=False)
+                st.info(f"{o_ad} adına {o_tutar} TL ödeme kaydedildi.")
