@@ -55,7 +55,7 @@ def pdf_uret(teklif_verisi, kurumsal):
     return pdf.output(dest='S').encode('latin-1')
 
 # --- YAN PANEL ---
-st.sidebar.title("🛡️ KARARGAH v10.0")
+st.sidebar.title("🛡️ KARARGAH v11.0")
 menu = st.sidebar.selectbox("KOMUTA MERKEZİ", 
     ["🏗️ Proje Yönetimi", "📊 Proje Dashboard", "📄 Teklif & PDF", "🏗️ Taşeron & Hakediş", 
      "👷 Personel & Puantaj", "💸 Finans & Giderler", "🚚 Malzeme Transferi", "🏠 Müşteri Paneli"])
